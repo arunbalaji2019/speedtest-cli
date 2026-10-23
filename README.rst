@@ -79,6 +79,7 @@ Usage
                          [--share] [--simple] [--csv]
                          [--csv-delimiter CSV_DELIMITER] [--csv-header] [--json]
                          [--list] [--server SERVER] [--exclude EXCLUDE]
+                         [--max-distance MAX_DISTANCE]
                          [--mini MINI] [--source SOURCE] [--timeout TIMEOUT]
                          [--secure] [--no-pre-allocate] [--version]
 
@@ -114,6 +115,10 @@ Usage
                             multiple times
       --exclude EXCLUDE     Exclude a server from selection. Can be supplied
                             multiple times
+      --max-distance MAX_DISTANCE
+                            Only consider servers within this distance (in km) of
+                            the client. Servers farther away are excluded from
+                            selection.
       --mini MINI           URL of the Speedtest Mini server
       --source SOURCE       Source IP address to bind to
       --timeout TIMEOUT     HTTP timeout in seconds. Default 10

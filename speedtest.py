@@ -1237,9 +1237,10 @@ class Speedtest(object):
 
         return self.config
 
-    def get_servers(self, servers=None, exclude=None):
+    def get_servers(self, servers=None, exclude=None, max_distance=None):
         """Retrieve a the list of speedtest.net servers, optionally filtered
-        to servers matching those specified in the ``servers`` argument
+        to servers matching those specified in the ``servers`` argument,
+        and to servers within ``max_distance`` km (inclusive) of the client
         """
         if servers is None:
             servers = []
@@ -1346,6 +1347,9 @@ class Speedtest(object):
                     except Exception:
                         continue
 
+                    if max_distance is not None and d > max_distance:
+                        continue
+
                     attrib['d'] = d
 
                     try:
@@ -1358,7 +1362,8 @@ class Speedtest(object):
             except ServersRetrievalError:
                 continue
 
-        if (servers or exclude) and not self.servers:
+        if ((servers or exclude or max_distance is not None)
+                and not self.servers):
             raise NoMatchedServers()
 
         return self.servers
@@ -1766,6 +1771,11 @@ def parse_args():
     parser.add_argument('--exclude', type=PARSER_TYPE_INT, action='append',
                         help='Exclude a server from selection. Can be '
                              'supplied multiple times')
+    parser.add_argument('--max-distance', type=PARSER_TYPE_FLOAT,
+                        default=None,
+                        help='Only consider servers within this distance '
+                             '(in km) of the client. Servers farther away '
+                             'are excluded from selection.')
     parser.add_argument('--mini', help='URL of the Speedtest Mini server')
     parser.add_argument('--source', help='Source IP address to bind to')
     parser.add_argument('--timeout', default=10, type=PARSER_TYPE_FLOAT,
@@ -1853,6 +1863,9 @@ def shell():
     if len(args.csv_delimiter) != 1:
         raise SpeedtestCLIError('--csv-delimiter must be a single character')
 
+    if args.max_distance is not None and args.max_distance <= 0:
+        raise SpeedtestCLIError('--max-distance must be a positive number')
+
     if args.csv_header:
         csv_header(args.csv_delimiter)
 
@@ -1893,7 +1906,9 @@ def shell():
 
     if args.list:
         try:
-            speedtest.get_servers()
+            speedtest.get_servers(max_distance=args.max_distance)
+        except NoMatchedServers:
+            raise SpeedtestCLIError('No server is within specified range')
         except (ServersRetrievalError,) + HTTP_ERRORS:
             printer('Cannot retrieve speedtest server list', error=True)
             raise SpeedtestCLIError(get_exception())
@@ -1916,8 +1931,11 @@ def shell():
     if not args.mini:
         printer('Retrieving speedtest.net server list...', quiet)
         try:
-            speedtest.get_servers(servers=args.server, exclude=args.exclude)
+            speedtest.get_servers(servers=args.server, exclude=args.exclude,
+                                  max_distance=args.max_distance)
         except NoMatchedServers:
+            if not args.server:
+                raise SpeedtestCLIError('No server is within specified range')
             raise SpeedtestCLIError(
                 'No matched servers: %s' %
                 ', '.join('%s' % s for s in args.server)
