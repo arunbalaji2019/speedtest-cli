@@ -1367,7 +1367,7 @@ class Speedtest(object):
         if ((servers or exclude or max_distance is not None)
                 and not self.servers):
             if not retrieved:
-                raise ServersRetrievalError()
+                raise ServersRetrievalError('; '.join(errors))
             raise NoMatchedServers()
 
         return self.servers
