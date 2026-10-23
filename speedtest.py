@@ -1271,6 +1271,7 @@ class Speedtest(object):
             headers['Accept-Encoding'] = 'gzip'
 
         errors = []
+        retrieved = False
         for url in urls:
             try:
                 request = build_request(
@@ -1357,6 +1358,7 @@ class Speedtest(object):
                     except KeyError:
                         self.servers[d] = [attrib]
 
+                retrieved = True
                 break
 
             except ServersRetrievalError:
@@ -1364,6 +1366,8 @@ class Speedtest(object):
 
         if ((servers or exclude or max_distance is not None)
                 and not self.servers):
+            if not retrieved:
+                raise ServersRetrievalError()
             raise NoMatchedServers()
 
         return self.servers
@@ -1863,7 +1867,7 @@ def shell():
     if len(args.csv_delimiter) != 1:
         raise SpeedtestCLIError('--csv-delimiter must be a single character')
 
-    if args.max_distance is not None and args.max_distance <= 0:
+    if args.max_distance is not None and not args.max_distance > 0:
         raise SpeedtestCLIError('--max-distance must be a positive number')
 
     if args.csv_header:

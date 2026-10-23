@@ -95,6 +95,22 @@ def test_max_distance_excluding_everything_raises(st):
         st.get_servers(max_distance=1)
 
 
+@pytest.mark.parametrize('kwargs', [
+    {'max_distance': 500}, {'exclude': [1]}, {'servers': [1]}])
+def test_retrieval_failure_with_filter_raises_retrieval_error(
+        st, monkeypatch, kwargs):
+    monkeypatch.setattr(speedtest, 'catch_request',
+                        lambda request, opener=None: (None, 'boom'))
+    with pytest.raises(speedtest.ServersRetrievalError):
+        st.get_servers(**kwargs)
+
+
+def test_retrieval_failure_without_filter_returns_empty(st, monkeypatch):
+    monkeypatch.setattr(speedtest, 'catch_request',
+                        lambda request, opener=None: (None, 'boom'))
+    assert st.get_servers() == {}
+
+
 def test_max_distance_combines_with_server_and_exclude(st):
     assert ids(st.get_servers(exclude=[1], max_distance=D_B)) == [2]
     assert ids(st.get_servers(servers=[2, 3], max_distance=D_B)) == [2]
@@ -130,7 +146,7 @@ def run_shell(monkeypatch):
     return run
 
 
-@pytest.mark.parametrize('value', ['0', '-5'])
+@pytest.mark.parametrize('value', ['0', '-5', 'nan'])
 def test_shell_rejects_non_positive_max_distance(run_shell, value):
     with pytest.raises(speedtest.SpeedtestCLIError) as exc:
         run_shell('--max-distance', value)
