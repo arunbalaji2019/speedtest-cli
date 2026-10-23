@@ -1934,12 +1934,18 @@ def shell():
             speedtest.get_servers(servers=args.server, exclude=args.exclude,
                                   max_distance=args.max_distance)
         except NoMatchedServers:
-            if not args.server:
+            if args.server:
+                raise SpeedtestCLIError(
+                    'No matched servers: %s' %
+                    ', '.join('%s' % s for s in args.server)
+                )
+            if args.max_distance is not None and args.exclude:
+                raise SpeedtestCLIError('No server is within specified range '
+                                        'after applying --exclude')
+            if args.max_distance is not None:
                 raise SpeedtestCLIError('No server is within specified range')
-            raise SpeedtestCLIError(
-                'No matched servers: %s' %
-                ', '.join('%s' % s for s in args.server)
-            )
+            raise SpeedtestCLIError('No servers remain after applying '
+                                    '--exclude')
         except (ServersRetrievalError,) + HTTP_ERRORS:
             printer('Cannot retrieve speedtest server list', error=True)
             raise SpeedtestCLIError(get_exception())

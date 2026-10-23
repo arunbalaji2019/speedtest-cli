@@ -112,7 +112,8 @@ class FakeSpeedtest(object):
 
     def get_servers(self, **kwargs):
         FakeSpeedtest.calls.append(kwargs)
-        if kwargs.get('max_distance') is not None:
+        if (kwargs.get('max_distance') is not None or kwargs.get('servers')
+                or kwargs.get('exclude')):
             raise speedtest.NoMatchedServers()
         return {}
 
@@ -145,10 +146,19 @@ def test_shell_main_path_no_server_in_range(run_shell):
         {'servers': None, 'exclude': None, 'max_distance': 5.0}]
 
 
-def test_shell_main_path_with_server_keeps_matched_message(run_shell):
+@pytest.mark.parametrize('argv, message', [
+    (['--server', '42'], 'No matched servers: 42'),
+    (['--server', '42', '--server', '43', '--exclude', '1',
+      '--max-distance', '5'], 'No matched servers: 42, 43'),
+    (['--max-distance', '5'], 'No server is within specified range'),
+    (['--exclude', '1', '--max-distance', '5'],
+     'No server is within specified range after applying --exclude'),
+    (['--exclude', '1'], 'No servers remain after applying --exclude'),
+])
+def test_shell_main_path_no_matched_messages(run_shell, argv, message):
     with pytest.raises(speedtest.SpeedtestCLIError) as exc:
-        run_shell('--simple', '--server', '42', '--max-distance', '5')
-    assert str(exc.value) == 'No matched servers: 42'
+        run_shell('--simple', *argv)
+    assert str(exc.value) == message
 
 
 def test_shell_list_path_passes_max_distance(run_shell):
